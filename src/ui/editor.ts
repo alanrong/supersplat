@@ -3,22 +3,22 @@ import { Mat4, Vec3 } from 'playcanvas';
 
 import { DataPanel } from './data-panel';
 import { Events } from '../events';
-import { BottomToolbar } from './bottom-toolbar';
+// import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
 import { localize, localizeInit } from './localization';
-import { Menu } from './menu';
-import { ModeToggle } from './mode-toggle';
+// import { Menu } from './menu';
+// import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
-import { ScenePanel } from './scene-panel';
+// import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
-import { ViewCube } from './view-cube';
+// import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { ViewerExportPopup } from './viewer-export-popup';
 import { version } from '../../package.json';
@@ -111,32 +111,32 @@ class EditorUI {
         tooltipsContainer.append(tooltips);
 
         // bottom toolbar
-        const scenePanel = new ScenePanel(events, tooltips);
+        // const scenePanel = new ScenePanel(events, tooltips);
         const viewPanel = new ViewPanel(events, tooltips);
         const colorPanel = new ColorPanel(events, tooltips);
-        const bottomToolbar = new BottomToolbar(events, tooltips);
+        // const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
-        const modeToggle = new ModeToggle(events, tooltips);
-        const menu = new Menu(events);
+        // const modeToggle = new ModeToggle(events, tooltips);
+        // const menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
         canvasContainer.append(cursorLabel);
         canvasContainer.append(toolsContainer);
-        canvasContainer.append(scenePanel);
+        // canvasContainer.append(scenePanel);
         canvasContainer.append(viewPanel);
         canvasContainer.append(colorPanel);
-        canvasContainer.append(bottomToolbar);
+        // canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
-        canvasContainer.append(modeToggle);
-        canvasContainer.append(menu);
+        // canvasContainer.append(modeToggle);
+        // canvasContainer.append(menu);
 
         // view axes container
-        const viewCube = new ViewCube(events);
-        canvasContainer.append(viewCube);
-        events.on('prerender', (cameraMatrix: Mat4) => {
-            viewCube.update(cameraMatrix);
-        });
+        // const viewCube = new ViewCube(events);
+        // canvasContainer.append(viewCube);
+        // events.on('prerender', (cameraMatrix: Mat4) => {
+        //     viewCube.update(cameraMatrix);
+        // });
 
         // main container
         const mainContainer = new Container({
