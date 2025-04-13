@@ -16,9 +16,9 @@
     "scripts": {
         "build": "rollup -c",
         "watch": "rollup -c -w",
-        "serve": "serve dist -C -l 0",
+        "serve": "serve dist -C -l 56789",
         "develop": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
-        "develop:auto-launch": "concurrently --kill-others \"node -e 'setTimeout(() => {}, 1000)' && xdg-open http://localhost:$(node -p 'require(\"./get-port.js\")')\" \"npm run watch\" \"npm run serve\"",
+        "develop:auto-launch": "concurrently --kill-others \"node -e 'setTimeout(() => {}, 1000)' && xdg-open http://localhost:56789\" \"npm run watch\" \"npm run serve\"",
         "develop:local": "cross-env ENGINE_PATH=../engine npm run develop",
         "build:local": "cross-env ENGINE_PATH=../engine npm run build",
         "watch:local": "cross-env ENGINE_PATH=../engine npm run watch",
