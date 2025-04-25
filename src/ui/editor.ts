@@ -1,7 +1,7 @@
 import { Container, Label } from 'pcui';
 import { Mat4, Vec3 } from 'playcanvas';
 
-import { DataPanel } from './data-panel';
+// import { DataPanel } from './data-panel';
 import { Events } from '../events';
 // import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
@@ -15,7 +15,7 @@ import { RightToolbar } from './right-toolbar';
 // import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
 import { Spinner } from './spinner';
-import { TimelinePanel } from './timeline-panel';
+// import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
 import { VideoSettingsDialog } from './video-settings-dialog';
 // import { ViewCube } from './view-cube';
@@ -143,12 +143,12 @@ class EditorUI {
             id: 'main-container'
         });
 
-        const timelinePanel = new TimelinePanel(events, tooltips);
-        const dataPanel = new DataPanel(events);
+        // const timelinePanel = new TimelinePanel(events, tooltips);
+        // const dataPanel = new DataPanel(events);
 
         mainContainer.append(canvasContainer);
-        mainContainer.append(timelinePanel);
-        mainContainer.append(dataPanel);
+        // mainContainer.append(timelinePanel);
+        // mainContainer.append(dataPanel);
 
         editorContainer.append(mainContainer);
 
