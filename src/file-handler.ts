@@ -129,7 +129,7 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
 
     // returns a promise that resolves when the file is loaded
-    const handleImport = async (url: string, filename?: string, animationFrame = false) => {
+    const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
         try {
             if (!filename) {
                 // extract filename from url if one isn't provided
@@ -148,6 +148,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             } else if (lowerFilename.endsWith('.ply') || lowerFilename.endsWith('.splat')) {
                 const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
                 scene.add(model);
+                if (focusCamera) scene.camera.focus();
                 return model;
             } else {
                 throw new Error('Unsupported file type');
@@ -161,30 +162,113 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     };
 
-    events.function('import', (url: string, filename?: string, animationFrame = false) => {
-        return handleImport(url, filename, animationFrame);
+    events.function('import', (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
+        return handleImport(url, filename, focusCamera, animationFrame);
     });
 
-    // create a file selector element as fallback when showOpenFilePicker isn't available
-    let fileSelector: HTMLInputElement;
-    if (!window.showOpenFilePicker) {
-        fileSelector = document.createElement('input');
-        fileSelector.setAttribute('id', 'file-selector');
-        fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat');
-        fileSelector.setAttribute('multiple', 'true');
+    // 修改文件选择器创建逻辑
+    let fileSelector: HTMLInputElement | null = null;
 
-        fileSelector.onchange = async () => {
-            const files = fileSelector.files;
-            for (let i = 0; i < files.length; i++) {
-                const file = fileSelector.files[i];
-                const url = URL.createObjectURL(file);
-                await handleImport(url, file.name);
-                URL.revokeObjectURL(url);
+    const getFileSelector = () => {
+        if (fileSelector) {
+            console.warn('文件选择器已存在，避免重复创建');
+            return fileSelector;
+        }
+    
+        console.group('创建增强版文件选择器');
+        fileSelector = document.createElement('input');
+        fileSelector.id = 'supersplat-file-selector';
+        fileSelector.type = 'file';
+        fileSelector.accept = '.ply,.splat';
+        fileSelector.multiple = true;
+        fileSelector.style.display = 'none';
+    
+        // 彻底禁用相机模式
+        fileSelector.removeAttribute('capture');
+        fileSelector.setAttribute('data-capture', 'none');
+        fileSelector.setAttribute('data-role', 'none');
+    
+        // 移动端特殊处理
+        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        console.log('设备检测结果:', {
+            isMobile,
+            userAgent: navigator.userAgent,
+            platform: navigator.platform
+        });
+    
+        if (isMobile) {
+            console.log('应用移动端增强配置');
+            // 添加这些属性确保文件选择模式
+            fileSelector.setAttribute('webkitdirectory', '');
+            fileSelector.setAttribute('directory', '');
+            fileSelector.setAttribute('data-file-mode', 'true');
+            
+            // 特殊处理Android WebView
+            if (/Android/.test(navigator.userAgent)) {
+                console.log('Android WebView特殊处理');
+                fileSelector.setAttribute('accept', '*/*');
+                fileSelector.setAttribute('data-android-fix', 'true');
             }
+        }
+    
+        // 修改点击事件处理逻辑，确保只绑定一次
+        const handleClick = (e: Event) => {
+            console.log('文件选择器点击事件:', e);
+            e.stopPropagation();
+            fileSelector.value = ''; // 重置选择器值
         };
-        document.body.append(fileSelector);
-    }
+    
+        fileSelector.onclick = handleClick;
+    
+        fileSelector.onchange = async (e) => {
+            console.group('文件选择结果');
+            try {
+                const files = fileSelector?.files;
+                if (!files || files.length === 0) {
+                    console.warn('用户取消选择或未选择文件');
+                    return;
+                }
+                
+                console.log('成功选择文件:', Array.from(files).map(f => f.name));
+                
+                // 处理每个选择的文件
+                for (const file of Array.from(files)) {
+                    console.group(`处理文件: ${file.name}`);
+                    try {
+                        const url = URL.createObjectURL(file);
+                        console.log('创建对象URL:', url);
+                        
+                        // 添加文件类型检测日志
+                        const fileType = file.name.toLowerCase().endsWith('.ply') ? 'PLY' : 
+                                        file.name.toLowerCase().endsWith('.splat') ? 'SPLAT' : '未知';
+                        console.log('检测到文件类型:', fileType);
+                        
+                        // 实际处理文件
+                        const model = await handleImport(url, file.name);
+                        console.log('文件处理结果:', model ? '成功' : '失败');
+                        
+                        URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.error('文件处理错误:', error);
+                        await events.invoke('showPopup', {
+                            type: 'error',
+                            header: localize('popup.error-loading'),
+                            message: `${error.message ?? error} while loading '${file.name}'`
+                        });
+                    }
+                    console.groupEnd();
+                }
+            } catch (error) {
+                console.error('文件选择器处理错误:', error);
+            }
+            console.groupEnd();
+        };
+    
+        document.body.appendChild(fileSelector);
+        console.log('文件选择器创建完成', fileSelector);
+        console.groupEnd();
+        return fileSelector;
+    };
 
     // create the file drag & drop handler
     CreateDropHandler(dropTarget, async (entries, shift) => {
@@ -262,11 +346,14 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         return getSplats().length === 0;
     });
 
+    // 修改scene.import函数
     events.function('scene.import', async () => {
-        if (fileSelector) {
-            fileSelector.click();
-        } else {
-            try {
+        console.group('=== 文件导入流程 ===');
+        try {
+            console.log('检查现代文件选择API可用性:', !!window.showOpenFilePicker);
+            
+            if (window.showOpenFilePicker) {
+                console.log('使用现代文件选择API');
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileOpen',
                     multiple: true,
@@ -283,12 +370,15 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                         fileHandle = handle;
                     }
                 }
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error(error);
-                }
+            } else {
+                console.log('使用回退文件选择器方案');
+                const selector = getFileSelector();
+                selector.click(); // 直接触发点击，不再添加额外的事件监听
             }
+        } catch (error) {
+            console.error('文件导入流程异常:', error);
         }
+        console.groupEnd();
     });
 
     // open a folder

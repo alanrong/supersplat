@@ -162,41 +162,102 @@ class AssetLoader {
     }
 
     loadSplat(loadRequest: ModelLoadRequest) {
+        console.log('启动SPLAT文件加载流程...');
         this.events.fire('startSpinner');
 
         return new Promise<Splat>((resolve, reject) => {
-            fetch(loadRequest.url || loadRequest.filename)
-            .then((response) => {
-                if (!response || !response.ok || !response.body) {
-                    reject(new Error('Failed to fetch splat data'));
-                } else {
-                    return response.arrayBuffer();
+            try {
+                console.log('检查加载请求内容...');
+                if (loadRequest.contents) {
+                    console.log('使用提供的二进制内容加载SPLAT...');
+                    const gsplatData = deserializeFromSSplat(loadRequest.contents);
+                    const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
+                        url: loadRequest.url,
+                        filename: loadRequest.filename
+                    });
+                    asset.resource = new GSplatResource(this.device, gsplatData, []);
+                    console.log('SPLAT资源创建成功');
+                    resolve(new Splat(asset));
+                    return;
                 }
-            })
-            .then(arrayBuffer => deserializeFromSSplat(arrayBuffer))
-            .then((gsplatData) => {
-                const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
-                    url: loadRequest.url,
-                    filename: loadRequest.filename
-                });
-                asset.resource = new GSplatResource(this.device, gsplatData, []);
-                resolve(new Splat(asset));
-            })
-            .catch((err) => {
-                console.error(err);
-                reject(new Error('Failed to load splat data'));
-            });
+
+                console.log('检查URL或文件名...');
+                if (!loadRequest.url && !loadRequest.filename) {
+                    console.error('未提供文件路径或内容');
+                    throw new Error('No file path or content provided');
+                }
+
+                console.log('开始从URL获取SPLAT数据:', loadRequest.url || loadRequest.filename);
+                fetch(loadRequest.url || loadRequest.filename)
+                    .then((response) => {
+                        console.log('收到响应:', response.status);
+                        if (!response || !response.ok || !response.body) {
+                            throw new Error('Failed to fetch splat data');
+                        }
+                        return response.arrayBuffer();
+                    })
+                    .then(arrayBuffer => {
+                        console.log('获取到ArrayBuffer，大小:', arrayBuffer.byteLength);
+                        return deserializeFromSSplat(arrayBuffer);
+                    })
+                    .then((gsplatData) => {
+                        console.log('SPLAT数据反序列化成功，包含点数:', gsplatData.numSplats);
+                        const asset = new Asset(loadRequest.filename || loadRequest.url, 'gsplat', {
+                            url: loadRequest.url,
+                            filename: loadRequest.filename
+                        });
+                        asset.resource = new GSplatResource(this.device, gsplatData, []);
+                        console.log('SPLAT资源创建完成');
+                        resolve(new Splat(asset));
+                    })
+                    .catch((err) => {
+                        console.error('SPLAT加载过程中出错:', err);
+                        reject(new Error('Failed to load splat data: ' + err.message));
+                    });
+            } catch (err) {
+                console.error('SPLAT加载初始化出错:', err);
+                reject(err);
+            }
         }).finally(() => {
+            console.log('结束SPLAT加载流程');
             this.events.fire('stopSpinner');
         });
     }
 
     loadModel(loadRequest: ModelLoadRequest) {
+        console.group('=== 文件导入诊断日志 ===');
+        console.log('开始加载模型，请求参数:', {
+            url: loadRequest.url,
+            filename: loadRequest.filename,
+            hasContents: !!loadRequest.contents,
+            maxAnisotropy: loadRequest.maxAnisotropy
+        });
+
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        if (filename.endsWith('.ply')) {
-            return this.loadPly(loadRequest);
-        } else if (filename.endsWith('.splat')) {
-            return this.loadSplat(loadRequest);
+        console.log('检测到的文件扩展名:', filename.split('.').pop());
+        
+        // 检查是否是目录路径
+        if (filename && (filename.endsWith('/') || filename.endsWith('\\'))) {
+            console.error('路径指向目录，无法加载:', filename);
+            throw new Error('Cannot load model: Path points to a directory');
+        }
+
+        try {
+            if (filename.endsWith('.ply')) {
+                console.log('开始加载PLY文件...');
+                return this.loadPly(loadRequest);
+            } else if (filename.endsWith('.splat')) {
+                console.log('开始加载SPLAT文件...');
+                return this.loadSplat(loadRequest);
+            } else {
+                console.error('不支持的文件类型:', filename);
+                throw new Error(`Unsupported file type: ${filename}`);
+            }
+        } catch (error) {
+            console.error('文件加载过程中出错:', error);
+            throw error;
+        } finally {
+            console.groupEnd();
         }
     }
 }
